@@ -1,0 +1,644 @@
+﻿<!doctype html>
+<html manifest="/html/localApp.manifest"
+      ng-app="LunchSPA">
+
+<head>
+    <title>Gradelink Lunch App</title>
+    <meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
+
+    <link rel="stylesheet" type="text/css" href="/framework/bootstrap/css/bootstrap-3.2.0.min.css" />
+    <link rel="Stylesheet" type="text/css" href="/css/jquery/jquery-ui-1.8.16.custom.css" />
+
+    <script src="/javascript/jquery/jquery-1.8.3.min.js"></script>
+    <script src="/scripts/angular.min.js"></script>
+    <script src="/javascript/underscore-1.7.0.min.js"></script>
+
+<!--
+    <script src="/scripts/angular-touch.min.js"></script>
+    <script src="/javascript/angularjs/ui-bootstrap-tpls-0.11.0.min.js"></script>
+    <script src="/javascript/angularjs/ui-utils-0.1.1.min.js"></script>
+    <script src="/javascript/angularjs/masks.js"></script>
+    <script src="/javascript/angularjs/angular-ui-date.js"></script>
+    <script type="text/javascript" src="/javascript/jquery/jquery-ui-1.8.23.custom.min.js"></script>
+/*
+            $scope.dateOptions = {
+                changeYear: false,
+                changeMonth: false,
+                yearRange: '1900:-0'
+            };
+*/
+-->
+
+    <script>
+
+        var _student = { StudentName: '', StudentID: 0, xStudentID: 0 };
+        var _order = { StudentID: 0, date: null, amount: 0.00, timeStamp: null };
+
+        var app = angular.module('LunchSPA', [/*'ui.bootstrap', 'ngTouch', 'ui.utils' , 'ui.utils.masks'*/]);
+
+        app.controller('ctrlLunchSPA', function ($scope) {
+
+            $scope.Today = '';
+            $scope.xStudentID = 'dummy';
+            $scope.StudentName = '';
+            $scope.Amount = '';
+            $scope.lookupMatch = false;
+
+            $scope.connectionMode = '';
+
+            $scope.students = [];
+            $scope.orders = [];
+
+            var _order = {
+                StudentID: null,
+                xStudentID: null,
+                StudentName: null,
+                Amount: null
+            };
+
+            // Continuous search while user is entering xStudentID values...
+            $scope.StudentIdEntered = function () {
+                var student = _.findWhere($scope.students, { xStudentID: $scope.xStudentID });
+                //                    console.log('search within ' + $scope.students.length + ' for ' + $scope.xStudentID);
+                $scope.lookupMatch = student ? true : false;
+                if ($scope.lookupMatch)
+                    $scope.StudentName = student.StudentName;
+                else
+                    $scope.StudentName = '';
+            }
+
+            $scope.dataEntry = function (char) {
+                if (!$scope[$scope.currentControl])
+                    $scope[$scope.currentControl] = '';
+                $scope[$scope.currentControl] += char;
+            }
+
+            // Clear 'dummy' value to trigger focus on StudentID field...
+            $scope.$watch('Today', function (currentValue, previousValue) {
+                if (currentValue != previousValue) {
+                    $scope.xStudentID = '';
+                    $scope.loadOrders();
+                }
+            });
+
+            // Search for student name when xStudentID changes...
+            $scope.$watch('xStudentID', function (currentValue, previousValue) {
+                if (currentValue != previousValue) {
+                    $scope.StudentIdEntered();
+                }
+            });
+
+            $scope.loadStudents = function () {
+                var params = {
+                    SchoolID: '13', ID: 'ClassID', EK: 'EK'
+                };
+
+                $.ajax({
+                    type: "POST",
+                    async: true, // async ok since we don't use to 'paint' initial page
+                    contentType: "application/json; charset=utf-8",
+                    dataType: "json",
+                    url: "/asp.net.sis/LunchApp.aspx/loadStudents",
+                    data: JSON.stringify(params),
+                    success: function (data, textStatus, jqXHR) {
+                        $scope.students = data.students;
+                        localStorage["students"] = JSON.stringify($scope.students);
+                        $scope.connectionMode = 'Online';
+                        $scope.StudentIdEntered();
+                        $scope.$apply();
+                    },
+                    error: function (jqXHR, textStatus, errorThrown) {
+                        alert(jqXHR.responseText);
+                        if (localStorage["students"])
+                            try {
+                                $scope.students = JSON.parse(localStorage["students"]);
+                            } catch (e) {
+                            }
+                        $scope.connectionMode = 'Offline, caching data';
+                        $scope.StudentIdEntered();
+                        $scope.$apply();
+                    }
+                });
+            }
+
+            $scope.loadOrders = function () {
+                var params = {
+                    SchoolID: '13', ID: 'ClassID', EK: 'EK'
+                };
+
+                $.ajax({
+                    type: "POST",
+                    async: true, // async ok since we don't use to 'paint' initial page
+                    contentType: "application/json; charset=utf-8",
+                    dataType: "json",
+                    url: "/asp.net.sis/LunchApp.aspx/loadStudents",
+                    data: JSON.stringify(params),
+                    success: function (data, textStatus, jqXHR) {
+                        $scope.orders = data.orders;
+                        localStorage["orders"] = JSON.stringify($scope.orders);
+                        $scope.connectionMode = 'Online';
+                        $scope.$apply();
+                    },
+                    error: function (jqXHR, textStatus, errorThrown) {
+                        alert(jqXHR.responseText);
+                        if (localStorage["orders"])
+                            try {
+                                $scope.students = JSON.parse(localStorage["orders"]);
+                            } catch (e) {
+                            }
+                        $scope.connectionMode = 'Offline, caching data';
+                        $scope.StudentIdEntered();
+                        $scope.$apply();
+                    }
+                });
+            }
+
+            $scope.loadStudents();
+
+            $scope.SaveOrder = function () {
+                var order = {};
+                order.Date = $scope.Today;
+                order.xStudentID = $scope.xStudentID;
+                order.StudentName = $scope.StudentName;
+                order.Amount = $scope.Amount;
+                order.TimeStamp = Date.now();
+                $scope.orders.push(order);
+
+                $scope.uploadOrders();
+
+                $scope.ClearOrder();
+            }
+
+            $scope.ClearOrder = function () {
+                $scope.xStudentID = undefined;
+                $scope.StudentName = undefined;
+                $scope.Amount = undefined;
+            }
+
+            $scope.uploadOrders = function () {
+                var params = {
+                    SchoolID: '13', ID: 'ClassID', EK: 'EK',
+                    Orders: JSON.stringify($scope.orders)
+                };
+
+                $.ajax({
+                    type: "POST",
+                    async: true,
+                    contentType: "application/json; charset=utf-8",
+                    dataType: "json",
+                    url: "/asp.net.sis/StandardsDB.aspx/uploadOrders",
+                    data: JSON.stringify(params),
+                    success: function (data, textStatus, jqXHR) {
+                        //                            alert('Changes saved')
+                    },
+                    error: function (jqXHR, textStatus, errorThrown) {
+                        alert(jqXHR.responseText);
+                    }
+                });
+            }
+
+            $scope.uploadOrders = function () {
+                var params = {
+                    'SchoolID': '13', 'ID': 'ClassID', 'EK': 'EK',
+                    'Orders': JSON.stringify($scope.orders)
+                };
+
+                $.ajax({
+                    type: "POST",
+                    async: true,
+                    contentType: "application/json; charset=utf-8",
+                    dataType: "json",
+                    url: "/asp.net.sis/LunchApp.aspx/uploadOrders",
+                    data: JSON.stringify(params),
+                    success: function (data, textStatus, jqXHR) {
+                        //                            alert('Changes saved')
+                        $scope.connectionMode = 'Online';
+                        $scope.$apply();
+                    },
+                    error: function (jqXHR, textStatus, errorThrown) {
+                        alert(jqXHR.responseText);
+                    }
+                });
+            }
+
+
+
+
+        });
+
+        var blurFocusDirective = function () {
+            return {
+                restrict: 'E',
+                require: '?ngModel',
+                link: function (scope, elm, attr, ctrl) {
+                    if (!ctrl) {
+                        return;
+                    }
+
+                    elm.on('focus', function () {
+                        elm.addClass('has-focus');
+
+                        scope.$apply(function () {
+                            ctrl.hasFocus = true;
+                            scope.currentControl = $(elm.context).attr('ng-model');
+                        });
+                    });
+
+                    elm.on('blur', function () {
+                        elm.removeClass('has-focus');
+                        elm.addClass('has-visited');
+
+                        scope.$apply(function () {
+                            ctrl.hasFocus = false;
+                            //                                scope.currentControl = undefined;
+                            ctrl.hasVisited = true;
+                        });
+                    });
+
+                    elm.closest('form').on('submit', function () {
+                        elm.addClass('has-visited');
+
+                        scope.$apply(function () {
+                            ctrl.hasFocus = false;
+                            //                                scope.currentControl = undefined;
+                            ctrl.hasVisited = true;
+                        });
+                    });
+
+                }
+            };
+        };
+
+        app.directive('input', blurFocusDirective);
+        app.directive('select', blurFocusDirective);
+
+        app.directive('syncFocusWith', function ($timeout, $rootScope) {
+            return {
+                restrict: 'A',
+                scope: {
+                    focusValue: "=syncFocusWith"
+                },
+                link: function ($scope, $element, attrs) {
+                    $scope.$watch("focusValue", function (currentValue, previousValue) {
+                        if (currentValue === true && !previousValue) {
+                            console.log('focusValue:' + currentValue)
+                            $element[0].focus();
+                            $($element[0]).trigger('focus');
+                        }
+                        //                            else if (currentValue === false && previousValue) {
+                        //                                $element[0].blur();
+                        //                            }
+                    })
+                }
+            }
+        });
+
+        app.directive('autoFocus', function ($timeout) {
+            return {
+                restrict: 'AC',
+                link: function (_scope, _element) {
+                    $timeout(function () {
+                        _element[0].focus();
+                    }, 0);
+                }
+            };
+        });
+
+        app.directive("ngMobileClick", [function () {
+            return function (scope, elem, attrs) {
+                elem.bind(isMobile() ? "touchstart" : "click", function (e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    scope.$apply(attrs["ngMobileClick"]);
+                });
+            }
+        }])
+
+        function isMobile() 
+        {
+            return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        }
+    </script>
+
+    <style>
+        body {
+/*            padding-bottom: 70px; */
+
+            -webkit-user-select: none;  /* Chrome all / Safari all */
+            -moz-user-select: none;     /* Firefox all */
+            -ms-user-select: none;      /* IE 10+ */
+
+            /* No support for these yet, use at own risk */
+            -o-user-select: none;
+            user-select: none;   
+        }
+
+        .page-header, .navbar {
+            margin: 0px;
+            background-color: #636c93;
+            border: none;
+            color: white;
+            padding-top: 12px;
+            height: 60px;
+        }
+
+        .page-header {
+            font-size: x-large;
+        }
+
+        .navbar {
+            font-size: medium;
+        }
+
+        .page-header .row-fluid div {
+            display: inline-block;
+            text-align: center;
+        }
+
+            .page-header .row-fluid div:first-child {
+                display: inline-block;
+                float: left;
+                font-weight: bold;
+                letter-spacing: 1px;
+            }
+
+            .page-header .row-fluid div:last-child {
+                display: inline-block;
+                float: right;
+            }
+
+        input[type=text] {
+            width: 140px;
+            text-align: center;
+        }
+
+            input[type=text]:focus {
+                background: white;
+            }
+
+        input[ui-date] {
+            width: 130px;
+            font-size: large;
+        }
+
+        input[ng-model="StudentName"] {
+            width: 250px;
+        }
+
+        input[ng-model="Amount"] {
+            text-align: right;
+        }
+
+        .container {
+            max-width: 800px;
+            text-align: center;
+        }
+
+        .page-header .row-fluid {
+            max-width: 760px;
+        }
+
+        .row .form-group {
+            text-align: center;
+        }
+
+            .row .form-group .form-control {
+                display: inline-block;
+            }
+
+        .container .row.content {
+            border-radius: 10px;
+            background-color: whitesmoke;
+            margin-top: 20px;
+            padding-top: 20px;
+            padding-bottom: 20px;
+            font-size: x-large;
+        }
+
+        .container .row.content input {
+            font-size: x-large;
+            height: 40px;
+        }
+
+        .control-group button {
+            margin-left: 15px;
+            margin-top: 5px;
+        }
+
+        label {
+            white-space: nowrap;
+            overflow: hidden;
+        }
+
+        table.table {
+            table-layout: fixed;
+            margin-bottom: 0px;
+        }
+
+        th {
+            text-align: center;
+        }
+
+        .div-table-header {
+            padding-left: 18px;
+            padding-right: 18px;
+        }
+
+        .div-table-content {
+            padding-left: 18px;
+            height: 150px;
+            overflow-y: scroll;
+        }
+
+        .keypad table td {
+            border: none !important;
+        }
+
+            .keypad table td > div {
+                border: 1px solid #636c93 !important;
+                border-radius: 10px;
+                background-color: white !important;
+                color: #636c93;
+                line-height: 2.5em;
+                max-width: 90px;
+                max-height: 145px;
+            }
+
+        .keypad > div:last-child {
+            font-size: x-large;
+            padding-top: 20px;
+            padding-bottom: 20px;
+            border-radius: 10px;
+            background-color: whitesmoke;
+            margin-top: 20px;
+        }
+    </style>
+
+</head>
+
+<body ng-controller="ctrlLunchSPA">
+
+    <div class="page-header">
+        <div class="container">
+            <div class="row-fluid">
+                <div>Gradelink</div>
+                <div>
+                    Lunch Orders for {{Today}}
+                    <div class="form-group col-xs-4" style="padding-left: 0px;"
+                         ng-show="!Today">
+                        <select ng-model="Today" auto-focus
+                                style="color:black;">
+                            <option value=""></option>
+                            <option value="10/04/2014">10/04/2014</option>
+                            <option value="10/03/2014">10/03/2014</option>
+                            <option value="10/02/2014">10/02/2014</option>
+                            <option value="10/01/2014">10/01/2014</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <form class="container"
+          ng-submit="SaveOrder()">
+
+        <div class="row content"
+             ng-if="!Today">
+            Please enter an order entry date above to get started...
+        </div>
+
+
+        <div class="row content"
+             ng-show="Today"
+             sync-focus-with="!Today">
+
+            <div class="form-group col-xs-4">
+                <label>
+                    Student ID
+                </label>
+                <br />
+                <input id="xStudentID"
+                       ng-model="xStudentID" placeholder="####"
+                       ng-disabled="Amount"
+                       sync-focus-with="!xStudentID"
+                       readonly
+                       class="form-control" type="text" required />
+            </div>
+
+            <div class="form-group col-xs-4">
+                <label>
+                    Student Name
+                </label>
+                <br />
+                <input ng-model="StudentName"
+                       placeholder="{{ (xStudentID && !StudentName) ? ( (currentControl != 'xStudentID') ? '(type in new student name)' : 'searching...' ) : (!xStudentID ? '(Enter student ID)' : '' ) }}"
+                       ng-disabled="lookupMatch || !xStudentID"
+                       class="form-control" type="text"
+                       style="width: 100%;" required />
+            </div>
+
+            <div class="form-group col-xs-4">
+                <label>
+                    Amount
+                </label>
+                <br />
+                <input ng-model="Amount" placeholder="$ 0.00"
+                       ui-money-maskX
+                       ng-disabled="!xStudentID"
+                       class="form-control" type="text" required />
+            </div>
+
+            <div style="clear:both; height: 20px">&nbsp;</div>
+
+            <div class="control-group btn-group-lg col-xs-4" style="float: right;">
+                <button type="submit"
+                        class="btn btn-success">
+                    Submit
+                </button>
+                <button type="button"
+                        ng-mobile-click="ClearOrder()"
+                        class="btn btn-warning">
+                    Cancel
+                </button>
+            </div>
+
+            {{currentControl}}
+
+        </div>
+
+        <div class="row keypad">
+            <div class="col-xs-1 col-sm-3"></div>
+            <div class="col-xs-10 col-sm-6">
+                <table class="table">
+                    <tbody>
+                        <tr>
+                            <td><div ng-mobile-click="dataEntry('7')">7</div></td>
+                            <td><div ng-mobile-click="dataEntry('8')">8</div></td>
+                            <td><div ng-mobile-click="dataEntry('9')">9</div></td>
+                            <td><div ng-mobile-click="dataEntry('-')">-</div></td>
+                        </tr>
+                        <tr>
+                            <td><div ng-mobile-click="dataEntry('4')">4</div></td>
+                            <td><div ng-mobile-click="dataEntry('5')">5</div></td>
+                            <td><div ng-mobile-click="dataEntry('6')">6</div></td>
+                            <td><div ng-mobile-click="dataEntry('+')">+</div></td>
+                        </tr>
+                        <tr>
+                            <td><div ng-mobile-click="dataEntry('1')">1</div></td>
+                            <td><div ng-mobile-click="dataEntry('2')">2</div></td>
+                            <td><div ng-mobile-click="dataEntry('3')">3</div></td>
+                            <td rowspan="2"><div ng-mobile-click="dataEntry('')">Enter</div></td>
+                        </tr>
+
+                        <tr>
+                            <td colspan="2"><div style="max-width: 240px !important" ng-mobile-click="dataEntry('0')">0</div></td>
+                            <td><div ng-mobile-click="dataEntry('.')">.</div></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+<!--
+        <div class="row content"
+             ng-if="orders.length">
+
+            <div class="div-table-header">
+                <center style="font-weight: bold">Order History</center>
+                <br />
+                <table class="table table-bordered">
+                    <thead class="tabl">
+                        <tr>
+                            <th>Student ID</th>
+                            <th>Student Name</th>
+                            <th>Amount</th>
+                        </tr>
+                    </thead>
+                </table>
+            </div>
+
+            <div class="div-table-content">
+                <table class="table table-bordered table-striped table-condensed">
+                    <tbody>
+                        <tr ng-repeat="order in orders">
+                            <td>{{order.xStudentID}}</td>
+                            <td>{{order.StudentName}}</td>
+                            <td>{{order.Amount}}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+-->
+    </form>
+    <!--
+    <div class="navbar navbar-fixed-bottom">
+        <div class="container">
+            <div class="row-fluid">
+                <div style="color: yellow;">Connection mode: {{connectionMode}}</div>
+            </div>
+        </div>
+    </div>
+    -->
+</body>
+</html>

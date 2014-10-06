@@ -1,0 +1,283 @@
+﻿<!doctype html>
+<html manifest="/html/localApp.manifest"
+      ng-app="LunchSPA">
+
+<head>
+    <title>Gradelink Lunch App</title>
+    <meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
+
+    <link rel="stylesheet" type="text/css" href="/framework/bootstrap/css/bootstrap-3.2.0.min.css" />
+    <link rel="Stylesheet" type="text/css" href="/css/jquery/jquery-ui-1.8.16.custom.css" />
+
+    <script src="/javascript/jquery/jquery-1.8.3.min.js"></script>
+    <script src="/javascript/underscore-1.7.0.min.js"></script>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/fastclick/1.0.3/fastclick.min.js"></script>
+
+<!--
+    <script src="/scripts/angular.min.js"></script>
+    <script src="/scripts/angular-touch.min.js"></script>
+    <script src="/javascript/angularjs/angular-1.2.15.min.js"></script>
+    <script src="/javascript/angularjs/ui-utils-0.1.1.min.js"></script>
+    <script src="/javascript/angularjs/masks.js"></script>
+    <script src="/javascript/angularjs/angular-ui-date.js"></script>
+    <script type="text/javascript" src="/javascript/jquery/jquery-ui-1.8.23.custom.min.js"></script>
+/*
+            $scope.dateOptions = {
+                changeYear: false,
+                changeMonth: false,
+                yearRange: '1900:-0'
+            };
+*/
+-->
+
+    <script>
+
+        var _student = { StudentName: '', StudentID: 0, xStudentID: 0 };
+        var _order = { StudentID: 0, date: null, amount: 0.00, timeStamp: null };
+
+        window.addEventListener('load', function () {
+            new FastClick(document.body);
+        }, false);
+
+        function dataEntry(char) {
+            if (char == '5')
+                alert('five!');
+            valFunc = $('#xStudentID')[0];
+            valFunc.value += char;
+            //$scope.StudentName += char;
+        }
+
+    </script>
+
+    <style>
+        body {
+/*            padding-bottom: 70px; */
+
+            -webkit-user-select: none;  /* Chrome all / Safari all */
+            -moz-user-select: none;     /* Firefox all */
+            -ms-user-select: none;      /* IE 10+ */
+
+            /* No support for these yet, use at own risk */
+            -o-user-select: none;
+            user-select: none;
+        }
+
+        .page-header, .navbar {
+            margin: 0px;
+            background-color: #636c93;
+            border: none;
+            color: white;
+            padding-top: 12px;
+            height: 60px;
+        }
+
+        .page-header {
+            font-size: x-large;
+        }
+
+        .navbar {
+            font-size: medium;
+        }
+
+        .page-header .row-fluid div {
+            display: inline-block;
+            text-align: center;
+        }
+
+            .page-header .row-fluid div:first-child {
+                display: inline-block;
+                float: left;
+                font-weight: bold;
+                letter-spacing: 1px;
+            }
+
+            .page-header .row-fluid div:last-child {
+                display: inline-block;
+                float: right;
+            }
+
+        input[type=text] {
+            width: 140px;
+            text-align: center;
+        }
+
+            input[type=text]:focus {
+                background: white;
+            }
+
+        input[ui-date] {
+            width: 130px;
+            font-size: large;
+        }
+
+        input[ng-model="StudentName"] {
+            width: 250px;
+        }
+
+        input[ng-model="Amount"] {
+            text-align: right;
+        }
+
+        .container {
+            max-width: 800px;
+            text-align: center;
+        }
+
+        .page-header .row-fluid {
+            max-width: 760px;
+        }
+
+        .row .form-group {
+            text-align: center;
+        }
+
+            .row .form-group .form-control {
+                display: inline-block;
+            }
+
+        .container .row.content {
+            border-radius: 10px;
+            background-color: whitesmoke;
+            margin-top: 20px;
+            padding-top: 20px;
+            padding-bottom: 20px;
+            font-size: x-large;
+        }
+
+        .container .row.content input {
+            font-size: x-large;
+            height: 40px;
+        }
+
+        .control-group button {
+            margin-left: 15px;
+            margin-top: 5px;
+        }
+
+        label {
+            white-space: nowrap;
+            overflow: hidden;
+        }
+
+        table.table {
+            table-layout: fixed;
+            margin-bottom: 0px;
+        }
+
+        th {
+            text-align: center;
+        }
+
+        .div-table-header {
+            padding-left: 18px;
+            padding-right: 18px;
+        }
+
+        .div-table-content {
+            padding-left: 18px;
+            height: 150px;
+            overflow-y: scroll;
+        }
+
+        .keypad table td {
+            border: none !important;
+        }
+
+            .keypad table td > div {
+                border: 1px solid #636c93 !important;
+                border-radius: 10px;
+                background-color: white !important;
+                color: #636c93;
+                line-height: 2.5em;
+                max-width: 90px;
+                max-height: 145px;
+            }
+
+        .keypad > div:last-child {
+            font-size: x-large;
+            padding-top: 20px;
+            padding-bottom: 20px;
+            border-radius: 10px;
+            background-color: whitesmoke;
+            margin-top: 20px;
+        }
+
+    </style>
+
+</head>
+
+<body ng-controller="ctrlLunchSPA">
+
+    <form class="container"
+          ng-submit="SaveOrder()">
+
+
+        <div class="row content"
+             sync-focus-with="!Today">
+
+            <div class="form-group col-xs-4">
+                <label>
+                    Student ID
+                </label>
+                <br />
+                <input id="xStudentID"
+                       ng-model="xStudentID" placeholder="####"
+                       ng-disabled="Amount"
+                       sync-focus-with="!xStudentID"
+                       readonly
+                       class="form-control" type="text" required />
+            </div>
+
+            <div class="form-group col-xs-4">
+                <span class="input-xlarge form-control uneditable-input">{{StudentName}}</span>
+            </div>
+
+                <div class="form-group col-xs-4">
+                    <label>
+                        Amount
+                    </label>
+                    <br />
+                    <input ng-model="Amount" placeholder="$ 0.00"
+                           ui-money-maskx
+                           ng-disabled="!xStudentID"
+                           class="form-control" type="text" required />
+                </div>
+
+            </div>
+
+        <div class="row keypad">
+            <div class="col-xs-1 col-sm-3"></div>
+            <div class="col-xs-10 col-sm-6">
+                <table class="table">
+                    <tbody>
+                        <tr>
+                            <td><div onclick="dataEntry('7')">7</div></td>
+                            <td><div onclick="dataEntry('8')">8</div></td>
+                            <td><div onclick="dataEntry('9')">9</div></td>
+                            <td><div onclick="dataEntry('-')">-</div></td>
+                        </tr>
+                        <tr>
+                            <td><div onclick="dataEntry('4')">4</div></td>
+                            <td><div onclick="dataEntry('5')">5</div></td>
+                            <td><div onclick="dataEntry('6')">6</div></td>
+                            <td><div onclick="dataEntry('+')">+</div></td>
+                        </tr>
+                        <tr>
+                            <td><div onclick="dataEntry('1')">1</div></td>
+                            <td><div onclick="dataEntry('2')">2</div></td>
+                            <td><div onclick="dataEntry('3')">3</div></td>
+                            <td rowspan="2"><div onclick="dataEntry('')">Enter</div></td>
+                        </tr>
+
+                        <tr>
+                            <td colspan="2"><div style="max-width: 240px !important" onclick="dataEntry('0')">0</div></td>
+                            <td><div onclick="dataEntry('.')">.</div></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </form>
+</body>
+</html>
